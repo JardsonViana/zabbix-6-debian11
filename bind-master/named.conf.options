@@ -1,0 +1,109 @@
+// ACL "autorizados" essa colocamos os IPs que são autorizados a fazer consultas recursivas neste servidor.
+// Neste caso vou incluir os IPs que foram nos delegados bem como de localhost e todos IPs privados.
+acl autorizados {
+        127.0.0.1;
+        ::1;
+        192.168.0.0/16;
+        172.16.0.0/12;
+        100.64.0.0/10;
+        10.0.0.0/8;
+        45.80.48.0/22;
+        2804:f123::/32;
+        df00::/8;
+        2001:db8::/32;
+        fe80::/64;
+        
+}; 
+ 
+options {
+    // O diretório de trabalho do servidor
+    // Quaisquer caminho não informado será tomado como padrão este diretório
+    directory "/var/cache/bind";
+ 
+    //Suporte a DNSSEC
+    dnssec-validation auto;
+ 
+    // Conforme RFC1035
+    // https://www.ietf.org/rfc/rfc1035.txt
+    auth-nxdomain no;
+ 
+    // Respondendo para IPv4 e IPv6
+    // Porta 53 estará aberta para ambos v4 e v6 (pode ser informar apenas os IPs que ficarão ouvindo)
+    // ex listen-on { 127.0.0.1; 45.80.48.2; }; 
+    // ex listen-on-v6 { ::1; 2804:f123:bebe:cafe::2; };
+    // ou any para todos os IPs das interfaces (recomendado, pricipalmente em anycast)
+    listen-on { any; };
+    listen-on-v6 { any; };
+ 
+    // Serve como uma ferramenta de mitigação para o problema de ataques de amplificação de DNS
+    // No momento, a implementação de RRL (Response Rate Limiting)é recomendada apenas para servidores autoritativos
+    // Se seu servidor será apenas autoritativo descomente as linhas a baixo. (https://kb.isc.org/docs/aa-00994)
+    //rate-limit {
+    //    responses-per-second 15;
+    //    window 5;
+    //};
+ 
+    // Melhora o desempenho do servidor, reduzindo os volumes de dados de saída.
+    // O padrão BIND é (no) não.
+    minimal-responses yes;
+ 
+    // Reduzir o tráfego da rede e aumentar o desempenho, o servidor armazena respostas negativas.
+    // é usado para definir um tempo máximo de retenção para essas respostas no servidor. (segundos)
+    max-ncache-ttl 30;
+ 
+    // Desativar recursão. Por padrão já é yes.
+    // recursion no;
+ 
+    // Especifica quais hosts estão autorizados a fazer consultas
+    // recursivas através deste servidor.
+    // Aqui que você vai informar os IPs da sua rede que você irá permitir consultar os DNS.
+    allow-recursion { autorizados; };
+ 
+    // Endereço estão autorizados a emitir consultas ao cache local,
+    // sem acesso ao cache local as consultas recursivas são inúteis.
+    allow-query-cache { autorizados; };
+ 
+    // Especifica quais hosts estão autorizados a “fazer perguntas” ao seu DNS. 
+    // Se for apenas recursivo pode informa a ACL “autorizados” 
+    // allow-query { autorizados; };
+    allow-query { any; };
+ 
+    // Especifica quais hosts estão autorizados a receber transferências de zona a partir do servidor.
+    // Seu servidor Secundário, no nosso ex vou deixar então o ips dos dois servidores v4 e v6.
+    allow-transfer {
+        45.80.48.3;
+        2804:f123:bebe:cafe::3;
+    };
+    also-notify {
+        45.80.48.3;
+        2804:f123:bebe:cafe::3;
+    };
+ 
+    // Esta opção faz com que o servidor slave ao fazer a transferência de zonas
+    // mastes deste servidor não compile o arquivo, assim no outro servidor o arquivo
+    // da zona terá um texto "puro"
+    masterfile-format text;
+ 
+    // Para evitar que vase a versao do Bind, definimos um nome
+    version "JV Consult DNS Server";
+ 
+    // Define a quant. máxima de memória a ser usada para o cache do servidor (bytes ou porcentagem)
+    // Por padrão no debian 10/bind9 ele reserva 90% da memoria física. Então não se apavore com log ex.:
+    // Servidor com 2GB: none:106: 'max-cache-size 90%' - setting to 1795MB (out of 1994MB)
+    // Recomendo não alterar
+    // max-cache-size 512M;
+    // max-cache-size 50%;
+ 
+    // Não recomendado alterar para menos que 24h.
+    // Define o tempo máximo durante o qual o servidor armazena (informado pelo dono do domínio)
+    // em cache as respostas positivas, em segundos. O max-cache-ttl padrão é 604800 (uma semana) 
+    // max-cache-ttl 86400; // 24h 
+ 
+    // !!! Não recomendado alterar min-cache-ttl !!!
+    // Isso define o tempo mínimo para o qual o servidor armazena 
+    // em cache as respostas positivas, em segundos.
+    // Ex o google manda tempo de ttl de 300 segundos, 
+    // e você quer ignorar esse valor 300 e setar que o minimo seja 600.
+    // min-cache-ttl 600; // 10m
+ 
+};
