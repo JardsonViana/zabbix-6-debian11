@@ -65,8 +65,8 @@ options {
  
     // Especifica quais hosts estão autorizados a “fazer perguntas” ao seu DNS. 
     // Se for apenas recursivo pode informa a ACL “autorizados” 
-    // allow-query { autorizados; };
-    allow-query { any; };
+    allow-query { autorizados; };
+    // allow-query { any; };
  
     // Especifica quais hosts estão autorizados a receber transferências de zona a partir do servidor.
     // Seu servidor Secundário, no nosso ex vou deixar então o ips dos dois servidores v4 e v6.
@@ -97,7 +97,7 @@ options {
     // Não recomendado alterar para menos que 24h.
     // Define o tempo máximo durante o qual o servidor armazena (informado pelo dono do domínio)
     // em cache as respostas positivas, em segundos. O max-cache-ttl padrão é 604800 (uma semana) 
-    // max-cache-ttl 86400; // 24h 
+    max-cache-ttl 86400; // 24h 
  
     // !!! Não recomendado alterar min-cache-ttl !!!
     // Isso define o tempo mínimo para o qual o servidor armazena 
@@ -105,5 +105,14 @@ options {
     // Ex o google manda tempo de ttl de 300 segundos, 
     // e você quer ignorar esse valor 300 e setar que o minimo seja 600.
     // min-cache-ttl 600; // 10m
+    
+    recursion yes;
+    forwarders {
+      8.8.8.8;
+      1.1.1.1;
+      1.0.0.1;
+      8.8.4.4;
+    };
+    forward only;
  
 };
